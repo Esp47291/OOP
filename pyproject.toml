@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "ecommerce_core"
+version = "0.1.0"
+description = "ООП-ядро для интернет-магазина (учебный проект)"
+authors = ["Ваше Имя <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+pytest-cov = "^5.0"
+flake8 = "^7.0"
+black = "^24.4"
+isort = "^5.13"
+
+[tool.black]
+line-length = 119
+
+[tool.isort]
+profile = "black"
+line_length = 119
