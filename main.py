@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from src.models import Category, Product
 
 if __name__ == "__main__":
@@ -11,8 +13,6 @@ if __name__ == "__main__":
     print(Category.product_count)  # 2
 
     # main.py
-    from __future__ import annotations
-
 
     class Product:
 
