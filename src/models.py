@@ -1,164 +1,120 @@
 from __future__ import annotations
-
-from dataclasses import dataclass
 from typing import List, Dict, Any
 
 
 class Product:
     """
-    Товар интернет-магазина.
-
-    Параметры
-    ---------
-    name : str
-        Название товара.
-    price : float | int
-        Цена (> 0). Значение хранится в приватном атрибуте ``__price``.
-    quantity : int
-        Количество (> 0).
-    description : str, optional
-        Описание товара.
+    name, description, price (>0), quantity (>=0)
+    Поддерживает вызовы:
+        Product(name, price, quantity [, description])
+        Product(name, description, price, quantity)
     """
 
-    # ──────────────────────────── инициализация ───────────────────────────── #
+    def __init__(self, name: str, *args):
+        if len(args) < 2:
+            raise TypeError(
+                "Нужно минимум три позиционных аргумента: "
+                "name, price, quantity  (или  name, description, price, quantity)"
+            )
 
-    def __init__(
-        self,
-        name: str,
-        price: float | int,
-        quantity: int,
-        description: str = "",
-    ) -> None:
+        # вариант 1: (name, price, quantity, [description])
+        if isinstance(args[0], (int, float)):
+            price, quantity = args[0], args[1]
+            description = args[2] if len(args) > 2 else ""
+        # вариант 2: (name, description, price, quantity)
+        else:
+            description, price, quantity = args[0], args[1], args[2]
+
         if price <= 0 or quantity < 0:
-            raise ValueError("Цена и количество должны быть положительными")
+            raise ValueError("Цена должна быть положительной, количество — неотрицательным")
 
-        self.name = name
-        self.description = description
-        self.__price: float = float(price)        # приватный атрибут
+        self.name: str = name
+        self.description: str = description
+        self.__price: float = float(price)          # приватное хранение цены
         self.quantity: int = int(quantity)
 
-    # ──────────────────────────── price: property ─────────────────────────── #
+    # ─────────────────────  price property  ───────────────────── #
 
     @property
     def price(self) -> float:
-        """Текущая цена товара (read-only для прямого доступа)."""
         return self.__price
 
     @price.setter
     def price(self, value: float | int) -> None:
-        """
-        Меняет цену товара.  При нулевом или отрицательном значении
-        выводит предупреждение и не меняет цену.
-        """
         if value <= 0:
             print("Цена не должна быть нулевая или отрицательная")
             return
         self.__price = float(value)
 
-    # ───────────────────────── class-method helper ────────────────────────── #
+    # ─────────────────────  helpers  ───────────────────── #
 
     @classmethod
     def new_product(cls, data: Dict[str, Any]) -> "Product":
-        """
-        Создаёт товар из словаря::
-
-            data = {
-                "name": "AirPods",
-                "price": 24990,
-                "quantity": 10,
-                "description": "TWS-наушники",
-            }
-        """
         return cls(
-            name=data["name"],
-            price=data["price"],
-            quantity=data["quantity"],
-            description=data.get("description", ""),
+            data["name"],
+            data.get("description", ""),
+            data["price"],
+            data["quantity"],
         )
 
-    # ─────────────────────────────── служебное ────────────────────────────── #
+    def __str__(self) -> str:
+        price_view = int(self.price) if self.price.is_integer() else round(self.price, 2)
+        return f"{self.name}, {price_view} руб. Остаток: {self.quantity} шт."
 
     def __repr__(self) -> str:
         return f"Product({self.name!r}, {self.price}, {self.quantity})"
 
-    def __str__(self) -> str:
-        return f"{self.name}, {self.price} руб. Остаток: {self.quantity} шт."
+    # ─────────────────────  арифметика  ───────────────────── #
+
+    def __add__(self, other: "Product") -> float:
+        if not isinstance(other, Product):
+            return NotImplemented
+        return self.price * self.quantity + other.price * other.quantity
 
 
 class Category:
     """
-    Категория товаров.
-
-    Параметры
-    ---------
-    name : str
-        Название категории.
-    description : str
-        Описание.
-    products : list[Product] | None
-        Стартовый список товаров.
-
-    Класс-атрибуты
-    --------------
-    category_count : int
-        Сколько категорий создано.
-    products_count : int
-        Сколько товаров во всех категориях.
+    category_count  – количество созданных категорий
+    products_count  – суммарное количество товаров во всех категориях
     """
 
     category_count: int = 0
     products_count: int = 0
 
-    # ──────────────────────────── инициализация ───────────────────────────── #
-
-    def __init__(
-        self,
-        name: str,
-        description: str = "",
-        products: List[Product] | None = None,
-    ) -> None:
+    def __init__(self, name: str, description: str = "", products: List[Product] | None = None) -> None:
         self.name = name
         self.description = description
-        # приватный список товаров
         self.__products: List[Product] = list(products) if products else []
 
         Category.category_count += 1
-        Category.products_count += len(self.__products)
+        Category.products_count += sum(p.quantity for p in self.__products)
 
-    # ──────────────────────────── products: getter ────────────────────────── #
+    # ─────────────────────  работа с товарами  ───────────────────── #
 
     @property
     def products(self) -> str:
-        """
-        Возвращает список товаров в человекочитаемом формате::
-
-            iPhone 15 Pro, 149990 руб. Остаток: 5 шт.
-            …
-        """
+        """Человекочитаемый список продуктов (строки через \n, + перевод строки в конце)."""
         if not self.__products:
             return ""
-        lines = [str(item) for item in self.__products]
-        # по заданию - перевод строки в конце строки
-        return "\n".join(lines) + "\n"
-
-    # ────────────────────────── работа с товарами ─────────────────────────── #
+        return "\n".join(map(str, self.__products)) + "\n"
 
     def add_product(self, product: Product) -> None:
-        """Добавить товар в категорию и обновить счётчик."""
         if not isinstance(product, Product):
             raise TypeError("Можно добавлять только объекты Product")
-
         self.__products.append(product)
-        Category.products_count += 1
+        Category.products_count += product.quantity
 
-    # ─────────────────────────────── служебное ────────────────────────────── #
+    # ─────────────────────  iter, len, str, repr  ───────────────────── #
+
+    def __iter__(self):
+        return iter(self.__products)
 
     def __len__(self) -> int:
-        """len(category) &rarr; количество товаров."""
         return len(self.__products)
+
+    def __str__(self) -> str:
+        total_qty = sum(p.quantity for p in self.__products)
+        return f"{self.name}, количество продуктов: {total_qty} шт."
 
     def __repr__(self) -> str:
         return f"Category({self.name!r}, products={len(self)})"
-
-    def __str__(self) -> str:
-        return f"{self.name} ({len(self)} поз.)"
